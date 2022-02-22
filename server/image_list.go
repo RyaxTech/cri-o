@@ -8,6 +8,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+const LAYER_ANNOTATION_PREFIX = "imageLayer."
+
 // ListImages lists existing images.
 func (s *Server) ListImages(ctx context.Context, req *types.ListImagesRequest) (*types.ListImagesResponse, error) {
 	filter := ""
@@ -54,7 +56,8 @@ func ConvertImage(from *storage.ImageResult) *types.Image {
 	layers := make(map[string]string)
 	for key, value := range from.LayersInfo {
 		if value > 0 {
-			layers[key] = strconv.FormatUint(uint64(value), 10)
+			// Add prefix to differenciate our annotation from others
+			layers[LAYER_ANNOTATION_PREFIX+key] = strconv.FormatUint(uint64(value), 10)
 		}
 	}
 
