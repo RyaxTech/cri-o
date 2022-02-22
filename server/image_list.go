@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strconv"
+
 	"github.com/cri-o/cri-o/internal/storage"
 	"github.com/cri-o/cri-o/server/cri/types"
 	"golang.org/x/net/context"
@@ -49,10 +51,18 @@ func ConvertImage(from *storage.ImageResult) *types.Image {
 		repoDigests = []string{from.PreviousName + "@" + string(from.Digest)}
 	}
 
+	layers := make(map[string]string)
+	for key, value := range from.LayersInfo {
+		if value > 0 {
+			layers[key] = strconv.FormatUint(uint64(value), 10)
+		}
+	}
+
 	to := &types.Image{
 		ID:          from.ID,
 		RepoTags:    repoTags,
 		RepoDigests: repoDigests,
+		Spec:        &types.ImageSpec{Image: from.ID, Annotations: layers},
 	}
 
 	uid, username := getUserFromImage(from.User)

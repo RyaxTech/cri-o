@@ -55,6 +55,7 @@ type ImageResult struct {
 	RepoTags     []string
 	RepoDigests  []string
 	Size         *uint64
+	LayersInfo   map[string]int64
 	Digest       digest.Digest
 	ConfigDigest digest.Digest
 	User         string
@@ -76,6 +77,7 @@ type imageCacheItem struct {
 	size         *uint64
 	configDigest digest.Digest
 	info         *types.ImageInspectInfo
+	layersInfo   map[string]int64
 }
 
 type imageCache map[string]imageCacheItem
@@ -225,6 +227,7 @@ func (svc *imageService) buildImageCacheItem(systemContext *types.SystemContext,
 		return imageCacheItem{}, err
 	}
 	size := imageSize(imageFull)
+	layersInfo := layersInfo(imageFull)
 
 	info, err := imageFull.Inspect(svc.ctx)
 	if err != nil {
@@ -236,6 +239,7 @@ func (svc *imageService) buildImageCacheItem(systemContext *types.SystemContext,
 		size:         size,
 		configDigest: configDigest,
 		info:         info,
+		layersInfo:   layersInfo,
 	}, nil
 }
 
@@ -259,6 +263,7 @@ func (svc *imageService) buildImageResult(image *storage.Image, cacheItem imageC
 		RepoTags:     tags,
 		RepoDigests:  repoDigests,
 		Size:         cacheItem.size,
+		LayersInfo:   cacheItem.layersInfo,
 		Digest:       imageDigest,
 		ConfigDigest: cacheItem.configDigest,
 		User:         cacheItem.config.Config.User,
@@ -367,6 +372,18 @@ func imageSize(img types.Image) *uint64 {
 	if sum, err := img.Size(); err == nil {
 		usum := uint64(sum)
 		return &usum
+	}
+	return nil
+}
+
+func layersInfo(img types.Image) map[string]int64 {
+	layerInfoList := img.LayerInfos()
+	if layerInfoList != nil {
+		layerMap := make(map[string]int64)
+		for _, layerInfo := range layerInfoList {
+			layerMap[layerInfo.Digest.String()] = layerInfo.Size
+		}
+		return layerMap
 	}
 	return nil
 }
